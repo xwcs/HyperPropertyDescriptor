@@ -7,7 +7,10 @@
     {
         private readonly PropertyDescriptor _root;
 
-        protected PropertyDescriptor Root
+		//make possibility to force type externally
+		private Type _forcedType = null;
+
+		protected PropertyDescriptor Root
         {
             get { return _root; }
         }
@@ -108,12 +111,21 @@
             get { return Root.Name; }
         }
 
-        public override Type PropertyType
-        {
-            get { return Root.PropertyType; }
-        }
+		public override Type PropertyType
+		{
+			get	{
+				//Console.WriteLine("Type:" + (_forcedType == null ? Root.PropertyType : _forcedType).ToString());
+				return _forcedType == null ? Root.PropertyType : _forcedType;
+			}
+		}
 
-        public override void RemoveValueChanged(object component, EventHandler handler)
+		public Type ForcedPropertyType
+		{
+			get { return _forcedType == null ? Root.PropertyType : _forcedType; }
+			set { _forcedType = value; }
+		}
+
+		public override void RemoveValueChanged(object component, EventHandler handler)
         {
             Root.RemoveValueChanged(component, handler);
         }
