@@ -5,11 +5,58 @@ namespace Hyper.ComponentModel
     using System.ComponentModel;
     using System.Security.Permissions;
 
-    public sealed class HyperTypeDescriptionProvider : TypeDescriptionProvider
+	
+	
+	
+	public sealed class HyperTypeDescriptionProvider : TypeDescriptionProvider
     {
-        public static void Add(Type type)
+
+		public static void MorphPropertyType(object obj, string propName)
+		{
+			try
+			{
+				Type objectType = obj.GetType();
+				PropertyDescriptorCollection pdc = TypeDescriptor.GetProperties(objectType);
+				ChainingPropertyDescriptor pd = pdc.Find(propName, false) as ChainingPropertyDescriptor;
+				if (pd != null)
+				{
+					object val = pd.GetValue(obj);
+                    pd.ForcedPropertyType = val.GetType();
+				}
+
+				//now for EF proxy too
+				if (objectType.BaseType != null && objectType.Namespace == "System.Data.Entity.DynamicProxies")
+				{
+					objectType = objectType.BaseType;
+
+					pdc = TypeDescriptor.GetProperties(objectType);
+					pd = pdc.Find(propName, false) as ChainingPropertyDescriptor;
+					if (pd != null)
+					{
+						pd.ForcedPropertyType = pd.GetValue(obj).GetType();
+					}
+				}
+
+				
+			}
+			catch (Exception) { }
+
+		}
+
+		public static void Add(Type type)
         {
-            TypeDescriptionProvider parent = TypeDescriptor.GetProvider(type);
+			//Avoid some base types!!!!!!
+			if (type.FullName == "System.Object" ||
+				type.FullName == "System.String" ||
+				type.FullName == "System.DateTime" ||
+				type.IsPrimitive ||
+				type.IsValueType ||
+                !type.IsClass
+				)
+				return;
+			
+			// TODO: make smarter filter	
+			TypeDescriptionProvider parent = TypeDescriptor.GetProvider(type);
             TypeDescriptor.AddProvider(new HyperTypeDescriptionProvider(parent), type);
         }
 
@@ -46,7 +93,8 @@ namespace Hyper.ComponentModel
 
         public override sealed ICustomTypeDescriptor GetTypeDescriptor(Type objectType, object instance)
         {
-            lock (descriptors)
+			Console.WriteLine("Get type descriptor : " + objectType.Name);    
+			lock (descriptors)
             {
                 ICustomTypeDescriptor descriptor;
                 if (!descriptors.TryGetValue(objectType, out descriptor))
@@ -64,7 +112,7 @@ namespace Hyper.ComponentModel
             }
         }
 
-        [ReflectionPermission(SecurityAction.Assert, Flags = ReflectionPermissionFlag.AllFlags)]
+		[ReflectionPermission(SecurityAction.Assert, Flags = ReflectionPermissionFlag.AllFlags)]
         private ICustomTypeDescriptor BuildDescriptor(Type objectType)
         {
             // NOTE: "descriptors" already locked here
@@ -76,7 +124,7 @@ namespace Hyper.ComponentModel
             try
             {
                 // build a new descriptor from this, and replace the lookup
-                descriptor = new HyperTypeDescriptor(descriptor);
+                descriptor = new HyperTypeDescriptor(descriptor, objectType);
                 descriptors[objectType] = descriptor;
                 return descriptor;
             }

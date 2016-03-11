@@ -3,12 +3,52 @@
     using System;
     using System.ComponentModel;
 
-    public abstract class ChainingPropertyDescriptor : PropertyDescriptor
+
+	public static class TypeExtensionMethods
+	{
+		public static object GetPropValueByPath(this object obj, string name)
+		{
+			foreach (string part in name.Split('.'))
+			{
+				if (obj == null) { return null; }
+
+				Type type = obj.GetType();
+				System.Reflection.PropertyInfo info = type.GetProperty(part);
+				if (info == null) { return null; }
+
+				obj = info.GetValue(obj, null);
+			}
+			return obj;
+		}
+		
+		/*	
+		public static T GetPropValueByPath<T>(this object obj, string name)
+		{
+			object retval = GetPropValueByPath(obj, name);
+			if (retval == null) { return default(T); }
+
+			// throws InvalidCastException if types are incompatible
+			return (T)retval;
+		}
+		*/
+	}
+
+	/*
+	public class PropertyTypeMorphedEventData: EventArgs
+	{
+		public PropertyDescriptor Property { get; set; }
+	}
+	*/
+
+	public abstract class ChainingPropertyDescriptor : PropertyDescriptor
     {
         private readonly PropertyDescriptor _root;
 
 		//make possibility to force type externally
 		private Type _forcedType = null;
+
+
+		//public EventHandler<PropertyTypeMorphedEventData> PropertyTypeMorphed;
 
 		protected PropertyDescriptor Root
         {
@@ -122,7 +162,17 @@
 		public Type ForcedPropertyType
 		{
 			get { return _forcedType == null ? Root.PropertyType : _forcedType; }
-			set { _forcedType = value; }
+			set {
+				if(_forcedType != value) {
+					_forcedType = value;
+					/*
+					if (PropertyTypeMorphed != null)
+					{
+						PropertyTypeMorphed(this, new PropertyTypeMorphedEventData { Property = this });
+					}
+					*/
+				}			
+			}
 		}
 
 		public override void RemoveValueChanged(object component, EventHandler handler)

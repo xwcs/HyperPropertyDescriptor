@@ -6,18 +6,19 @@ namespace Hyper.ComponentModel
     using System.Reflection;
     using System.Reflection.Emit;
     using System.Threading;
+	using System.Linq;
 
-    public sealed class HyperTypeDescriptor : CustomTypeDescriptor
+	public sealed class HyperTypeDescriptor : CustomTypeDescriptor
     {
         private readonly PropertyDescriptorCollection propertyCollections;
 
         private static readonly Dictionary<PropertyInfo, PropertyDescriptor> properties =
             new Dictionary<PropertyInfo, PropertyDescriptor>();
 
-        internal HyperTypeDescriptor(ICustomTypeDescriptor parent)
+        internal HyperTypeDescriptor(ICustomTypeDescriptor parent, Type objectType)
             : base(parent)
         {
-            propertyCollections = WrapProperties(parent.GetProperties());
+            propertyCollections = WrapProperties(parent.GetProperties(), objectType);
         }
 
         public override sealed PropertyDescriptorCollection GetProperties(Attribute[] attributes)
@@ -30,9 +31,20 @@ namespace Hyper.ComponentModel
             return propertyCollections;
         }
 
-        private static PropertyDescriptorCollection WrapProperties(PropertyDescriptorCollection oldProps)
+        private static PropertyDescriptorCollection WrapProperties(PropertyDescriptorCollection oldProps, Type objectType)
         {
-            PropertyDescriptor[] newProps = new PropertyDescriptor[oldProps.Count];
+			/*
+				HACK: EF proxy object loose MetadataAttribute
+			*/
+			/*
+			if (objectType.BaseType != null && objectType.Namespace == "System.Data.Entity.DynamicProxies")
+			{
+				Attribute[] add = TypeDescriptor.GetAttributes(objectType.BaseType).OfType<MetadataTypeAttribute>().Cast<Attribute>().ToArray();
+                TypeDescriptor.AddAttributes(objectType, add);
+			}
+			*/
+
+			PropertyDescriptor[] newProps = new PropertyDescriptor[oldProps.Count];
             int index = 0;
             bool changed = false;
             // HACK: how to identify reflection, given that the class is internal...
