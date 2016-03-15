@@ -93,7 +93,6 @@ namespace Hyper.ComponentModel
 
         public override sealed ICustomTypeDescriptor GetTypeDescriptor(Type objectType, object instance)
         {
-			Console.WriteLine("Get type descriptor : " + objectType.Name);    
 			lock (descriptors)
             {
                 ICustomTypeDescriptor descriptor;

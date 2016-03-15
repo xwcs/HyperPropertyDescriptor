@@ -6,21 +6,44 @@
 
 	public static class TypeExtensionMethods
 	{
-		public static object GetPropValueByPath(this object obj, string name)
+		public static object GetPropValueByPathUsingReflection(this object obj, string name)
 		{
 			foreach (string part in name.Split('.'))
 			{
 				if (obj == null) { return null; }
-
-				Type type = obj.GetType();
-				System.Reflection.PropertyInfo info = type.GetProperty(part);
+				System.Reflection.PropertyInfo info = obj.GetType().GetProperty(part);
 				if (info == null) { return null; }
 
 				obj = info.GetValue(obj, null);
 			}
 			return obj;
 		}
-		
+
+		public static void SetPropValueByPathUsingReflection(this object obj, string name, object value)
+		{
+			try
+			{
+				object lastObject = null;
+
+				System.Reflection.PropertyInfo info = null;
+				foreach (string part in name.Split('.'))
+				{
+					if (obj == null) { return; }
+					//get info of property connected to current obj
+					info = obj.GetType().GetProperty(part);
+					if (info == null){ return; }
+					//go deeper
+					lastObject = obj;
+					obj = info.GetValue(obj, null);
+				}
+				//we are at the end so set value
+				info.SetValue(lastObject, value, null);
+			}
+			catch (Exception) {
+				throw new InvalidEnumArgumentException();
+			}			
+		}
+
 		/*	
 		public static T GetPropValueByPath<T>(this object obj, string name)
 		{
@@ -33,13 +56,6 @@
 		*/
 	}
 
-	/*
-	public class PropertyTypeMorphedEventData: EventArgs
-	{
-		public PropertyDescriptor Property { get; set; }
-	}
-	*/
-
 	public abstract class ChainingPropertyDescriptor : PropertyDescriptor
     {
         private readonly PropertyDescriptor _root;
@@ -47,8 +63,6 @@
 		//make possibility to force type externally
 		private Type _forcedType = null;
 
-
-		//public EventHandler<PropertyTypeMorphedEventData> PropertyTypeMorphed;
 
 		protected PropertyDescriptor Root
         {
@@ -165,12 +179,6 @@
 			set {
 				if(_forcedType != value) {
 					_forcedType = value;
-					/*
-					if (PropertyTypeMorphed != null)
-					{
-						PropertyTypeMorphed(this, new PropertyTypeMorphedEventData { Property = this });
-					}
-					*/
 				}			
 			}
 		}
@@ -187,7 +195,7 @@
 
         public override void SetValue(object component, object value)
         {
-            Root.SetValue(component, value);
+			Root.SetValue(component, value);
         }
 
         public override bool ShouldSerializeValue(object component)

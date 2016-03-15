@@ -33,17 +33,6 @@ namespace Hyper.ComponentModel
 
         private static PropertyDescriptorCollection WrapProperties(PropertyDescriptorCollection oldProps, Type objectType)
         {
-			/*
-				HACK: EF proxy object loose MetadataAttribute
-			*/
-			/*
-			if (objectType.BaseType != null && objectType.Namespace == "System.Data.Entity.DynamicProxies")
-			{
-				Attribute[] add = TypeDescriptor.GetAttributes(objectType.BaseType).OfType<MetadataTypeAttribute>().Cast<Attribute>().ToArray();
-                TypeDescriptor.AddAttributes(objectType, add);
-			}
-			*/
-
 			PropertyDescriptor[] newProps = new PropertyDescriptor[oldProps.Count];
             int index = 0;
             bool changed = false;
